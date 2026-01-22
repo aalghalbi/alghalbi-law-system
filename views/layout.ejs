@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title><%= title %></title>
+  <style>
+    body{margin:0;background:#0b1214;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Arial}
+    .wrap{max-width:900px;margin:0 auto;padding:24px}
+    .card{background:#101a1d;border:1px solid #1a2a2f;border-radius:16px;padding:18px}
+    input{width:100%;padding:12px;border-radius:12px;border:1px solid #21343a;background:#0b1214;color:#fff}
+    label{display:block;margin-top:10px;margin-bottom:6px;opacity:.9}
+    button{margin-top:12px;width:100%;padding:12px;border-radius:12px;border:0;background:#c39660;font-weight:700;cursor:pointer}
+    a{color:#c39660}
+    .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+    .muted{opacity:.75}
+    .error{background:#3a1313;border:1px solid #6b2323;padding:10px;border-radius:12px;margin-top:10px}
+    .row{display:flex;gap:10px;align-items:center}
+    .btn2{background:#22383f;color:#fff;border:1px solid #2b4a53;width:auto;padding:10px 14px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <strong>ALGHALBI • Case System</strong>
+      <% if (user) { %>
+        <form method="POST" action="/logout">
+          <button class="btn2" type="submit">تسجيل خروج</button>
+        </form>
+      <% } %>
+    </div>
+
+    <div class="card">
+      <%- body %>
+    </div>
+
+    <p class="muted" style="text-align:center;margin-top:14px;">© <%= new Date().getFullYear() %> Alghalbi Law</p>
+  </div>
+</body>
+</html>
