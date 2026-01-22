@@ -6,6 +6,7 @@ import { PrismaClient } from "@prisma/client";
 
 const app = express();
 const prisma = new PrismaClient();
+
 app.set("view engine", "ejs");
 app.set("views", new URL("../views", import.meta.url).pathname);
 
@@ -16,13 +17,9 @@ app.use(
     secret: process.env.SESSION_SECRET || "dev_secret_change_me",
     resave: false,
     saveUninitialized: false,
-    cookie: { httpOnly: true, sameSite: "lax" }
+    cookie: { httpOnly: true, sameSite: "lax" },
   })
 );
-
-// قاعدة بيانات بسيطة داخل الذاكرة (مؤقتًا فقط)
-// لاحقًا ننقلها لـ PostgreSQL
-const users = new Map(); // email -> { email, name, passwordHash }
 
 const allowedDomain = process.env.ALLOWED_EMAIL_DOMAIN || "alghalbilaw.com";
 
@@ -49,6 +46,7 @@ app.get("/", (req, res) => {
   return res.redirect("/login");
 });
 
+// ===== Auth =====
 app.get("/register", (req, res) => {
   res.render("register", { error: null, allowedDomain });
 });
@@ -60,21 +58,41 @@ app.post("/register", async (req, res) => {
     const password = String(req.body.password || "");
 
     if (!isAllowedEmail(email)) {
-      return res.status(400).render("register", { error: `التسجيل متاح فقط لإيميلات @${allowedDomain}`, allowedDomain });
+      return res
+        .status(400)
+        .render("register", {
+          error: `التسجيل متاح فقط لإيميلات @${allowedDomain}`,
+          allowedDomain,
+        });
     }
+
     if (password.length < 8) {
-      return res.status(400).render("register", { error: "كلمة المرور لازم 8 أحرف على الأقل.", allowedDomain });
+      return res
+        .status(400)
+        .render("register", { error: "كلمة المرور لازم 8 أحرف على الأقل.", allowedDomain });
     }
-    if (users.has(email)) {
-      return res.status(400).render("register", { error: "هذا الإيميل مسجل مسبقًا. جرّب تسجيل الدخول.", allowedDomain });
+
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return res
+        .status(400)
+        .render("register", { error: "هذا الإيميل مسجل مسبقًا. جرّب تسجيل الدخول.", allowedDomain });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    users.set(email, { email, name, passwordHash });
 
-    req.session.user = { email, name };
+    const user = await prisma.user.create({
+      data: {
+        email,
+        name,
+        password: passwordHash,
+      },
+    });
+
+    req.session.user = { id: user.id, email: user.email, name: user.name };
     return res.redirect("/dashboard");
   } catch (e) {
+    console.error(e);
     return res.status(400).render("register", { error: "صار خطأ.", allowedDomain });
   }
 });
@@ -89,22 +107,28 @@ app.post("/login", async (req, res) => {
     const password = String(req.body.password || "");
 
     if (!isAllowedEmail(email)) {
-      return res.status(400).render("login", { error: `الدخول متاح فقط لإيميلات @${allowedDomain}`, allowedDomain });
+      return res
+        .status(400)
+        .render("login", {
+          error: `الدخول متاح فقط لإيميلات @${allowedDomain}`,
+          allowedDomain,
+        });
     }
 
-    const user = users.get(email);
+    const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
       return res.status(400).render("login", { error: "بيانات الدخول غير صحيحة.", allowedDomain });
     }
 
-    const ok = await bcrypt.compare(password, user.passwordHash);
+    const ok = await bcrypt.compare(password, user.password);
     if (!ok) {
       return res.status(400).render("login", { error: "بيانات الدخول غير صحيحة.", allowedDomain });
     }
 
-    req.session.user = { email: user.email, name: user.name };
+    req.session.user = { id: user.id, email: user.email, name: user.name };
     return res.redirect("/dashboard");
-  } catch {
+  } catch (e) {
+    console.error(e);
     return res.status(400).render("login", { error: "صار خطأ.", allowedDomain });
   }
 });
@@ -113,9 +137,11 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => res.redirect("/login"));
 });
 
+// ===== Dashboard =====
 app.get("/dashboard", requireAuth, (req, res) => {
   res.render("dashboard");
 });
+
 // ===== Clients (الموكلين) =====
 
 // قائمة الموكلين
@@ -160,6 +186,11 @@ app.post("/clients/new", requireAuth, async (req, res) => {
     console.error(e);
     return res.status(400).render("client_new", { error: "صار خطأ أثناء الحفظ." });
   }
+});
+
+// ===== Health check (اختياري) =====
+app.get("/health", (req, res) => {
+  res.json({ ok: true });
 });
 
 const port = process.env.PORT || 10000;
