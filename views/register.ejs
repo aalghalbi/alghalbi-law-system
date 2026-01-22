@@ -1,0 +1,26 @@
+<%-
+  include("layout", {
+    title: "إنشاء حساب",
+    user,
+    body: `
+      <h2>إنشاء حساب</h2>
+      <p class="muted">مسموح فقط: @${allowedDomain}</p>
+      ${error ? `<div class="error">${error}</div>` : ""}
+
+      <form method="POST" action="/register">
+        <label>الاسم</label>
+        <input name="name" type="text" placeholder="عبدالرحمن الغالبي" />
+
+        <label>الإيميل</label>
+        <input name="email" type="email" placeholder="name@${allowedDomain}" required />
+
+        <label>كلمة المرور</label>
+        <input name="password" type="password" placeholder="8 أحرف على الأقل" required />
+
+        <button type="submit">إنشاء</button>
+      </form>
+
+      <p class="muted" style="margin-top:10px;">عندك حساب؟ <a href="/login">تسجيل الدخول</a></p>
+    `
+  })
+%>
