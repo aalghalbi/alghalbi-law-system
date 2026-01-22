@@ -116,6 +116,51 @@ app.post("/logout", (req, res) => {
 app.get("/dashboard", requireAuth, (req, res) => {
   res.render("dashboard");
 });
+// ===== Clients (الموكلين) =====
+
+// قائمة الموكلين
+app.get("/clients", requireAuth, async (req, res) => {
+  const clients = await prisma.client.findMany({
+    where: { ownerId: req.session.user.id },
+    orderBy: { createdAt: "desc" },
+  });
+
+  res.render("clients", { clients });
+});
+
+// صفحة إضافة موكل
+app.get("/clients/new", requireAuth, (req, res) => {
+  res.render("client_new", { error: null });
+});
+
+// حفظ موكل جديد
+app.post("/clients/new", requireAuth, async (req, res) => {
+  try {
+    const fullName = String(req.body.fullName || "").trim();
+    const email = String(req.body.email || "").trim() || null;
+    const phone = String(req.body.phone || "").trim() || null;
+    const notes = String(req.body.notes || "").trim() || null;
+
+    if (!fullName) {
+      return res.status(400).render("client_new", { error: "اسم الموكل مطلوب." });
+    }
+
+    await prisma.client.create({
+      data: {
+        fullName,
+        email,
+        phone,
+        notes,
+        ownerId: req.session.user.id,
+      },
+    });
+
+    return res.redirect("/clients");
+  } catch (e) {
+    console.error(e);
+    return res.status(400).render("client_new", { error: "صار خطأ أثناء الحفظ." });
+  }
+});
 
 const port = process.env.PORT || 10000;
 app.listen(port, () => console.log(`Server running on port ${port}`));
