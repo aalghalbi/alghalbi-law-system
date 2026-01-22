@@ -2,9 +2,10 @@ import "dotenv/config";
 import express from "express";
 import session from "express-session";
 import bcrypt from "bcryptjs";
+import { PrismaClient } from "@prisma/client";
 
 const app = express();
-
+const prisma = new PrismaClient();
 app.set("view engine", "ejs");
 app.set("views", new URL("../views", import.meta.url).pathname);
 
