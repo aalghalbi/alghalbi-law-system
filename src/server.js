@@ -7,46 +7,46 @@ import { PrismaClient } from "@prisma/client";
 const app = express();
 const prisma = new PrismaClient();
 
+/* ================== إعدادات أساسية ================== */
 app.set("view engine", "ejs");
 app.set("views", new URL("../views", import.meta.url).pathname);
-
 app.use(express.urlencoded({ extended: true }));
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "dev_secret_change_me",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { httpOnly: true, sameSite: "lax" },
+    cookie: { httpOnly: true, sameSite: "lax" }
   })
 );
 
-const allowedDomain = process.env.ALLOWED_EMAIL_DOMAIN || "alghalbilaw.com";
+/* ================== أدوات مساعدة ================== */
+const allowedDomain = process.env.ALLOWED_EMAIL_DOMAIN;
 
-function normalizeEmail(email) {
-  return String(email || "").trim().toLowerCase();
-}
+const normalizeEmail = (email) =>
+  String(email || "").trim().toLowerCase();
 
-function isAllowedEmail(email) {
-  return email.endsWith(`@${allowedDomain}`);
-}
+const isAllowedEmail = (email) =>
+  email.endsWith(`@${allowedDomain}`);
 
-function requireAuth(req, res, next) {
+const requireAuth = (req, res, next) => {
   if (!req.session.user) return res.redirect("/login");
   next();
-}
+};
 
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   next();
 });
 
+/* ================== الصفحة الرئيسية ================== */
 app.get("/", (req, res) => {
   if (req.session.user) return res.redirect("/dashboard");
-  return res.redirect("/login");
+  res.redirect("/login");
 });
 
-// ===== Auth =====
+/* ================== التسجيل ================== */
 app.get("/register", (req, res) => {
   res.render("register", { error: null, allowedDomain });
 });
@@ -54,49 +54,51 @@ app.get("/register", (req, res) => {
 app.post("/register", async (req, res) => {
   try {
     const email = normalizeEmail(req.body.email);
-    const name = String(req.body.name || "").trim() || null;
-    const password = String(req.body.password || "");
+    const name = req.body.name?.trim() || null;
+    const password = req.body.password || "";
 
     if (!isAllowedEmail(email)) {
-      return res
-        .status(400)
-        .render("register", {
-          error: `التسجيل متاح فقط لإيميلات @${allowedDomain}`,
-          allowedDomain,
-        });
+      return res.render("register", {
+        error: `مسموح فقط بإيميلات @${allowedDomain}`,
+        allowedDomain
+      });
     }
 
     if (password.length < 8) {
-      return res
-        .status(400)
-        .render("register", { error: "كلمة المرور لازم 8 أحرف على الأقل.", allowedDomain });
+      return res.render("register", {
+        error: "كلمة المرور 8 أحرف على الأقل",
+        allowedDomain
+      });
     }
 
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) {
-      return res
-        .status(400)
-        .render("register", { error: "هذا الإيميل مسجل مسبقًا. جرّب تسجيل الدخول.", allowedDomain });
+    const exists = await prisma.user.findUnique({ where: { email } });
+    if (exists) {
+      return res.render("login", {
+        error: "الحساب موجود مسبقاً",
+        allowedDomain
+      });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
 
     const user = await prisma.user.create({
-      data: {
-        email,
-        name,
-        password: passwordHash,
-      },
+      data: { email, name, password: passwordHash }
     });
 
-    req.session.user = { id: user.id, email: user.email, name: user.name };
-    return res.redirect("/dashboard");
-  } catch (e) {
-    console.error(e);
-    return res.status(400).render("register", { error: "صار خطأ.", allowedDomain });
+    req.session.user = {
+      id: user.id,
+      email: user.email,
+      name: user.name
+    };
+
+    res.redirect("/dashboard");
+  } catch (err) {
+    console.error(err);
+    res.render("register", { error: "صار خطأ", allowedDomain });
   }
 });
 
+/* ================== تسجيل الدخول ================== */
 app.get("/login", (req, res) => {
   res.render("login", { error: null, allowedDomain });
 });
@@ -104,53 +106,62 @@ app.get("/login", (req, res) => {
 app.post("/login", async (req, res) => {
   try {
     const email = normalizeEmail(req.body.email);
-    const password = String(req.body.password || "");
+    const password = req.body.password || "";
 
     if (!isAllowedEmail(email)) {
-      return res
-        .status(400)
-        .render("login", {
-          error: `الدخول متاح فقط لإيميلات @${allowedDomain}`,
-          allowedDomain,
-        });
+      return res.render("login", {
+        error: `مسموح فقط بإيميلات @${allowedDomain}`,
+        allowedDomain
+      });
     }
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      return res.status(400).render("login", { error: "بيانات الدخول غير صحيحة.", allowedDomain });
+      return res.render("login", {
+        error: "بيانات الدخول غير صحيحة",
+        allowedDomain
+      });
     }
 
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) {
-      return res.status(400).render("login", { error: "بيانات الدخول غير صحيحة.", allowedDomain });
+      return res.render("login", {
+        error: "بيانات الدخول غير صحيحة",
+        allowedDomain
+      });
     }
 
-    req.session.user = { id: user.id, email: user.email, name: user.name };
-    return res.redirect("/dashboard");
-  } catch (e) {
-    console.error(e);
-    return res.status(400).render("login", { error: "صار خطأ.", allowedDomain });
+    req.session.user = {
+      id: user.id,
+      email: user.email,
+      name: user.name
+    };
+
+    res.redirect("/dashboard");
+  } catch (err) {
+    console.error(err);
+    res.render("login", { error: "صار خطأ", allowedDomain });
   }
 });
 
+/* ================== تسجيل الخروج ================== */
 app.post("/logout", (req, res) => {
   req.session.destroy(() => res.redirect("/login"));
 });
 
-// ===== Dashboard =====
+/* ================== Dashboard ================== */
 app.get("/dashboard", requireAuth, (req, res) => {
   res.render("dashboard");
 });
 
-// ===== Clients (الموكلين) =====
+/* ================== الموكلين ================== */
 
-// قائمة الموكلين
+// عرض الموكلين
 app.get("/clients", requireAuth, async (req, res) => {
   const clients = await prisma.client.findMany({
     where: { ownerId: req.session.user.id },
-    orderBy: { createdAt: "desc" },
+    orderBy: { createdAt: "desc" }
   });
-
   res.render("clients", { clients });
 });
 
@@ -159,39 +170,19 @@ app.get("/clients/new", requireAuth, (req, res) => {
   res.render("client_new", { error: null });
 });
 
-// حفظ موكل جديد
+// حفظ موكل
 app.post("/clients/new", requireAuth, async (req, res) => {
   try {
-    const fullName = String(req.body.fullName || "").trim();
-    const email = String(req.body.email || "").trim() || null;
-    const phone = String(req.body.phone || "").trim() || null;
-    const notes = String(req.body.notes || "").trim() || null;
+    const { fullName, email, phone, notes } = req.body;
 
-    if (!fullName) {
-      return res.status(400).render("client_new", { error: "اسم الموكل مطلوب." });
+    if (!fullName?.trim()) {
+      return res.render("client_new", { error: "اسم الموكل مطلوب" });
     }
 
     await prisma.client.create({
       data: {
-        fullName,
-        email,
-        phone,
-        notes,
-        ownerId: req.session.user.id,
-      },
-    });
-
-    return res.redirect("/clients");
-  } catch (e) {
-    console.error(e);
-    return res.status(400).render("client_new", { error: "صار خطأ أثناء الحفظ." });
-  }
-});
-
-// ===== Health check (اختياري) =====
-app.get("/health", (req, res) => {
-  res.json({ ok: true });
-});
-
-const port = process.env.PORT || 10000;
-app.listen(port, () => console.log(`Server running on port ${port}`));
+        fullName: fullName.trim(),
+        email: email?.trim() || null,
+        phone: phone?.trim() || null,
+        notes: notes?.trim() || null,
+        ownerId:
