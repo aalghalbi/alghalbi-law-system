@@ -1,0 +1,23 @@
+<%-
+  include("layout", {
+    title: "تسجيل الدخول",
+    user,
+    body: `
+      <h2>تسجيل الدخول</h2>
+      <p class="muted">مسموح فقط: @${allowedDomain}</p>
+      ${error ? `<div class="error">${error}</div>` : ""}
+
+      <form method="POST" action="/login">
+        <label>الإيميل</label>
+        <input name="email" type="email" placeholder="name@${allowedDomain}" required />
+
+        <label>كلمة المرور</label>
+        <input name="password" type="password" placeholder="********" required />
+
+        <button type="submit">دخول</button>
+      </form>
+
+      <p class="muted" style="margin-top:10px;">ما عندك حساب؟ <a href="/register">سجّل هنا</a></p>
+    `
+  })
+%>
