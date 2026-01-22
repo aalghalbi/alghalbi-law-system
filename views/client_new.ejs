@@ -1,0 +1,30 @@
+<%-
+  include("layout", {
+    title: "إضافة موكل",
+    user,
+    body: `
+      <h2>إضافة موكل</h2>
+      ${error ? `<div class="error">${error}</div>` : ""}
+
+      <form method="POST" action="/clients/new">
+        <label>اسم الموكل (إجباري)</label>
+        <input name="fullName" type="text" placeholder="مثال: محمد أحمد" required />
+
+        <label>الإيميل</label>
+        <input name="email" type="email" placeholder="example@email.com" />
+
+        <label>الجوال</label>
+        <input name="phone" type="text" placeholder="05xxxxxxxx" />
+
+        <label>ملاحظات</label>
+        <input name="notes" type="text" placeholder="ملاحظات مختصرة..." />
+
+        <button type="submit">حفظ</button>
+      </form>
+
+      <p class="muted" style="margin-top:10px;">
+        <a href="/clients">رجوع لقائمة الموكلين</a>
+      </p>
+    `
+  })
+%>
