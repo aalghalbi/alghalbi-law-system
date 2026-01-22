@@ -154,35 +154,56 @@ app.get("/dashboard", requireAuth, (req, res) => {
   res.render("dashboard");
 });
 
-/* ================== الموكلين ================== */
+// ===== Clients (الموكلين) =====
 
-// عرض الموكلين
+// قائمة الموكلين
 app.get("/clients", requireAuth, async (req, res) => {
   const clients = await prisma.client.findMany({
     where: { ownerId: req.session.user.id },
-    orderBy: { createdAt: "desc" }
+    orderBy: { createdAt: "desc" },
   });
-  res.render("clients", { clients });
+
+  return res.render("clients", { clients });
 });
 
 // صفحة إضافة موكل
 app.get("/clients/new", requireAuth, (req, res) => {
-  res.render("client_new", { error: null });
+  return res.render("client_new", { error: null });
 });
 
-// حفظ موكل
+// حفظ موكل جديد
 app.post("/clients/new", requireAuth, async (req, res) => {
   try {
-    const { fullName, email, phone, notes } = req.body;
+    const fullName = String(req.body.fullName || "").trim();
+    const email = String(req.body.email || "").trim() || null;
+    const phone = String(req.body.phone || "").trim() || null;
+    const notes = String(req.body.notes || "").trim() || null;
 
-    if (!fullName?.trim()) {
-      return res.render("client_new", { error: "اسم الموكل مطلوب" });
+    if (!fullName) {
+      return res.status(400).render("client_new", { error: "اسم الموكل مطلوب." });
     }
 
     await prisma.client.create({
       data: {
-        fullName: fullName.trim(),
-        email: email?.trim() || null,
-        phone: phone?.trim() || null,
-        notes: notes?.trim() || null,
-        ownerId:
+        fullName,
+        email,
+        phone,
+        notes,
+        ownerId: req.session.user.id,
+      },
+    });
+
+    return res.redirect("/clients");
+  } catch (e) {
+    console.error(e);
+    return res.status(400).render("client_new", { error: "صار خطأ أثناء الحفظ." });
+  }
+});
+
+// (اختياري) فحص سريع للسيرفر
+app.get("/health", (req, res) => {
+  return res.json({ ok: true });
+});
+
+const port = process.env.PORT || 10000;
+app.listen(port, () => console.log(`Server running on port ${port}`));
