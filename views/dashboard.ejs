@@ -1,0 +1,26 @@
+<%-
+  include("layout", {
+    title: "Dashboard",
+    user,
+    body: `
+      <h2>لوحة التحكم</h2>
+      <p>مرحبًا <strong>${user?.name || user?.email}</strong></p>
+      <p class="muted">هذه نسخة أولية (تسجيل دخول فقط). الخطوة القادمة: الموكلين والقضايا.</p>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px;">
+        <div style="border:1px solid #1a2a2f;border-radius:14px;padding:12px;background:#0b1214;">
+          <strong>الموكلين</strong>
+          <div class="muted">قريبًا</div>
+        </div>
+        <div style="border:1px solid #1a2a2f;border-radius:14px;padding:12px;background:#0b1214;">
+          <strong>القضايا</strong>
+          <div class="muted">قريبًا</div>
+        </div>
+        <div style="border:1px solid #1a2a2f;border-radius:14px;padding:12px;background:#0b1214;">
+          <strong>المستندات</strong>
+          <div class="muted">قريبًا</div>
+        </div>
+      </div>
+    `
+  })
+%>
