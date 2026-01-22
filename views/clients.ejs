@@ -1,0 +1,33 @@
+<%-
+  include("layout", {
+    title: "الموكلين",
+    user,
+    body: `
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h2>الموكلين</h2>
+        <a href="/clients/new" style="background:#c39660;padding:10px 14px;border-radius:12px;color:#000;font-weight:700;text-decoration:none">
+          + إضافة موكل
+        </a>
+      </div>
+
+      ${clients.length === 0 ? `
+        <p class="muted">لا يوجد موكلين حتى الآن</p>
+      ` : `
+        <table style="width:100%;margin-top:12px;border-collapse:collapse">
+          <tr style="opacity:.8">
+            <th align="right">الاسم</th>
+            <th align="right">الإيميل</th>
+            <th align="right">الجوال</th>
+          </tr>
+          ${clients.map(c => `
+            <tr>
+              <td><a href="/clients/${c.id}">${c.fullName}</a></td>
+              <td>${c.email || "-"}</td>
+              <td>${c.phone || "-"}</td>
+            </tr>
+          `).join("")}
+        </table>
+      `}
+    `
+  })
+%>
